@@ -47,14 +47,43 @@ for(i in 1:(num_positive+num_negative)){
         data_temp <- readMat(pathname)
         mat_temp <- as.matrix(data_temp[[1]][[1]][,])
         
+        
         ###########################FFT        
-        for(f in 1:16){
-            pg <- periodogram(mat_temp[f, ])
+        for(r in 1:16){ # we have 16 rows in row data - one row for every sensor
+
+            pg <- periodogram(mat_temp[r, ])
             s_ord <- order(pg$spec, decreasing = T)
-            MAT[cur_number, (f-1)*(2*fft_comp_n) + seq(1,fft_comp_n)] <-
-                pg$spec[s_ord<=fft_comp_n]
-            MAT[cur_number, (f-1)*(2*fft_comp_n) + seq(fft_comp_n+1 ,2*fft_comp_n)] <-
-                pg$freq[s_ord<=fft_comp_n]
+            
+            cur_MAT_index <- 1 # for a given segment we fill 
+                               #in the cur_MAT_index place
+            
+            for(k in 1:max(s_ord)){ # go through max amplitude values and choose
+                                    #only those wich are on top
+                cur_max_number <- which(s_ord==k)
+                
+                if(cur_MAT_index > fft_comp_n) break 
+                    #stop loop when needed number of places filled in
+
+                if(cur_max_number == 1 | cur_max_number == length(pg$spec)) next
+                    # do not include the point on edge
+                
+                # check if this is true maximum
+                if( pg$spec[cur_max_number] - pg$spec[cur_max_number-1] > 0 &
+                        pg$spec[cur_max_number] - pg$spec[cur_max_number+1] > 0 ){
+                    # if yes, save the data
+                    MAT[cur_number, (r-1)*(fft_comp_n) + cur_MAT_index] <-
+                        pg$spec[cur_max_number] # modes amplitude
+                    
+                    MAT[cur_number, (r-1)*(fft_comp_n) + fft_comp_n + cur_MAT_index] <-
+                        pg$freq[cur_max_number] # correspond. frequencies
+                
+                    #print((r-1)*(2*fft_comp_n) + cur_MAT_index)
+                    #print((r-1)*(2*fft_comp_n) + fft_comp_n + cur_MAT_index)
+                    #print(cur_MAT_index)
+
+                    cur_MAT_index = cur_MAT_index + 1
+                }
+            }
         }
     }
 }
