@@ -3,43 +3,43 @@
 library(R.matlab)
 path <- c("e:/Temp/Dog_1/")
 
-num_positive <- 4
-num_negative <- 120 #120
+total_positive <- 24 / 6
+total_negative <- 480 / 6 #120
 
-fft_comp_n <- 30
+fft_comp_n <- 100
 
     #Matrix for input data
-MAT <- matrix(data = NA, nrow = num_positive+num_negative,
+MAT <- matrix(data = NA, nrow = total_positive+total_negative,
              ncol = (2*fft_comp_n) *16)
     # vector for responses
-Out <- c(rep(1, num_positive), rep(0, num_negative) )
+Out <- c(rep(1, total_positive), rep(0, total_negative) )
 
 library(GeneCycle)
 
-for(i in 1:(num_positive+num_negative)){
-    for(s in 1:6){
+for(fullCase_cur_number in 1:(total_positive+total_negative)){
+    for(segment in 1:6){
         
         ###########################separation of "Positive" and "Negative"
-        if(i<=num_positive){
+        if( fullCase_cur_number <= total_positive ){
             file_type <- "preictal"
-            cur_number <- (i-1)*6 + s            
+            file_number <- (fullCase_cur_number-1)*6 + segment            
         }
         else{
             file_type <- "interictal"   
-            cur_number <- (i-num_positive-1)*6 + s
+            file_number <- (fullCase_cur_number-total_positive-1)*6 + segment
         }
         
         ###########################Form file name
-        cur_number_t <- paste0(cur_number)
+        file_number_t <- paste0(file_number)
         
-        if(cur_number <= 9)
-            cur_number_t <- paste0("000", cur_number_t)
-        else if(cur_number <= 99)
-            cur_number_t <- paste0("00", cur_number_t)
-        else if(cur_number <= 999)
-            cur_number_t <- paste0("0", cur_number_t)            
+        if(file_number <= 9)
+            file_number_t <- paste0("000", file_number_t)
+        else if(file_number <= 99)
+            file_number_t <- paste0("00", file_number_t)
+        else if(file_number <= 999)
+            file_number_t <- paste0("0", file_number_t)            
         
-        filename <- paste0("Dog_1_", file_type, "_segment_", cur_number_t, ".mat")
+        filename <- paste0("Dog_1_", file_type, "_segment_", file_number_t, ".mat")
 
         ###########################Read data
         cat("Working with file", filename, "\n")
@@ -68,13 +68,13 @@ for(i in 1:(num_positive+num_negative)){
                     # do not include the point on edge
                 
                 # check if this is true maximum
-                if( pg$spec[cur_max_number] - pg$spec[cur_max_number-1] > 0 &
-                        pg$spec[cur_max_number] - pg$spec[cur_max_number+1] > 0 ){
+                if( pg$spec[cur_max_number] > pg$spec[cur_max_number-1] &
+                        pg$spec[cur_max_number] > pg$spec[cur_max_number+1] ){
                     # if yes, save the data
-                    MAT[cur_number, (r-1)*(fft_comp_n) + cur_MAT_index] <-
+                    MAT[ fullCase_cur_number, (r-1)*(2*fft_comp_n) + cur_MAT_index] <-
                         pg$spec[cur_max_number] # modes amplitude
                     
-                    MAT[cur_number, (r-1)*(fft_comp_n) + fft_comp_n + cur_MAT_index] <-
+                    MAT[ fullCase_cur_number, (r-1)*(2*fft_comp_n) + fft_comp_n + cur_MAT_index] <-
                         pg$freq[cur_max_number] # correspond. frequencies
                 
                     #print((r-1)*(2*fft_comp_n) + cur_MAT_index)
