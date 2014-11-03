@@ -1,35 +1,51 @@
-
-#Load the data for Dog_1
-library(R.matlab)
-path <- c("e:/Temp/Dog_1/")
-
-total_positive <- 24 / 6
-total_negative <- 480 / 6 #120
-
+folder <- "Dog_5"
+path <- paste0("e:/Temp/", folder)
+N.of.segm <- 6
 fft_comp_n <- 100
+N.of.clusters <- 8 # Number of clusters for a parralel execution
+
+## All variables shoulbe be entered above _______________
+
+library(foreach); library(doParallel)
+workers <- makeCluster(N.of.clusters);  registerDoParallel(workers)
+
+library(R.matlab)
+
+ptm <- proc.time()
+
+#here we use integer division to use only data files which do not form whole 6 segment data piece
+total_negative <- length(grep("interictal", dir(path))) %/% N.of.segm
+total_positive <- length(grep("preicta", dir(path))) %/% N.of.segm
+total_test <- length(grep("test", dir(path))) %/% N.of.segm
 
     #Matrix for input data
-MAT <- matrix(data = NA, nrow = total_positive+total_negative,
+MAT <- matrix(data = NA, nrow = total_positive+total_negative+total_test,
              ncol = (2*fft_comp_n) *16)
     # vector for responses
 Out <- c(rep(1, total_positive), rep(0, total_negative) )
 
 library(GeneCycle)
 
-for(fullCase_cur_number in 1:(total_positive+total_negative)){
-    for(segment in 1:6){
-        
-        ###########################separation of "Positive" and "Negative"
+write("", file="./current_progress.txt", append=FALSE)
+
+#for(fullCase_cur_number in 1:(total_positive+total_negative+total_test)){
+foreach(fullCase_cur_number = 1:(total_positive+total_negative+total_test) ) %dopar% {
+    for(segment in 1:N.of.segm){
+    #foreach(segment = 1:N.of.segm) %dopar% {       
+        ## FORM A FILE NAME TO READ
         if( fullCase_cur_number <= total_positive ){
             file_type <- "preictal"
-            file_number <- (fullCase_cur_number-1)*6 + segment            
+            file_number <- (fullCase_cur_number-1)*N.of.segm + segment            
+        }
+        else if( fullCase_cur_number <= total_positive+total_negative ){
+            file_type <- "interictal"   
+            file_number <- (fullCase_cur_number-total_positive-1)*N.of.segm + segment
         }
         else{
-            file_type <- "interictal"   
-            file_number <- (fullCase_cur_number-total_positive-1)*6 + segment
+            file_type <- "test"   
+            file_number <- (fullCase_cur_number-(total_positive+total_negative)-1)*N.of.segm + segment
         }
-        
-        ###########################Form file name
+            
         file_number_t <- paste0(file_number)
         
         if(file_number <= 9)
@@ -39,19 +55,20 @@ for(fullCase_cur_number in 1:(total_positive+total_negative)){
         else if(file_number <= 999)
             file_number_t <- paste0("0", file_number_t)            
         
-        filename <- paste0("Dog_1_", file_type, "_segment_", file_number_t, ".mat")
+        filename <- paste0(folder, "_", file_type, "_segment_", file_number_t, ".mat")
 
-        ###########################Read data
+        
+        ## READ FILE
         cat("Working with file", filename, "\n")
+        write( paste("Working with file", filename, "\n"), "current_progress.txt", append=TRUE)
         pathname <- file.path(path, filename)    
-        data_temp <- readMat(pathname)
+        data_temp <- R.matlab::readMat(pathname)
         mat_temp <- as.matrix(data_temp[[1]][[1]][,])
         
-        
-        ###########################FFT        
+        ## MAKE FFT transformation for data from a given file
         for(r in 1:16){ # we have 16 rows in row data - one row for every sensor
-
-            pg <- periodogram(mat_temp[r, ])
+        #foreach(r=1:16) %dopar% {
+            pg <- GeneCycle::periodogram(mat_temp[r, ])
             s_ord <- order(pg$spec, decreasing = T)
             
             cur_MAT_index <- 1 # for a given segment we fill 
@@ -90,6 +107,10 @@ for(fullCase_cur_number in 1:(total_positive+total_negative)){
 
 
 # Save the data
-write.matrix(MAT, file = "MAT.csv", sep = ",")
-
+library(MASS)
+write.matrix(MAT, file = paste0("fft_MAT_", folder, "_withTest.csv") , sep = ",")
 # next step would be To take learning algorithm and apply to data
+
+write( proc.time() - ptm, "current_progress.txt", append=TRUE)
+
+stopCluster(workers)

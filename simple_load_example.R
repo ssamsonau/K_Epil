@@ -17,7 +17,7 @@ sequence_PR <- data[[1]][[5]]
 
 
 # "Negative" outcome data
-filename <- paste0("Dog_1_interictal_segment_000", 1, ".mat") #1st segment of 6
+filename <- paste0("Dog_1_interictal_segment_00", 85, ".mat") #1st segment of 6
 pathname <- file.path(path, filename)    
 data <- readMat(pathname)
 df_IN <- data.frame(data[[1]][[1]][,])
