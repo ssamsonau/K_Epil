@@ -2,6 +2,9 @@ fft_comp_n <- 200
 N.of.clusters <- 3 # Number of clusters for a parralel execution
 data_location <- "j:/Data_Epil/"
 
+output.f <- paste0("./Output/FFT", fft_comp_n,"_segSep_SVMlinear/")
+progress_file <- "./Output/training_progress.txt"
+
 ## All variables shoulbe be entered above _______________
 library(Revobase);   setMKLthreads(4)
 
@@ -11,8 +14,6 @@ workers <- makeCluster(N.of.clusters);  registerDoParallel(workers)
 library(R.matlab)
 library(data.table)
 library(caret); library(pROC)
-
-progress_file <- "./Output/training_progress.txt"
 
 base::cat("", file=progress_file, append=F)
 
@@ -62,7 +63,7 @@ for(folder in dir(data_location)){
         
         capture.output(Mod, file=progress_file, append=T)
         #Save model if needed
-        save(Mod, file=paste0("./Output/Predicted_fft_Model_", fft_comp_n, "_", folder, "_seg", seg, ".model"))
+        save(Mod, file=paste0(output.f, "Predicted_fft_Model_", fft_comp_n, "_", folder, "_seg", seg, ".model"))
         
         
         #Make prediction
@@ -74,15 +75,15 @@ for(folder in dir(data_location)){
     Prediction[, 7] <- as.numeric( rowSums(Prediction[, 1:6]) > 0 )
         
     Predicted_Data <- cbind(MAT[Type==c("test"), file.name], Prediction)
-    write.table(Predicted_Data, file=paste0("./Output/Predicted_fft_SegmSeprate_Full", fft_comp_n, "_", folder, ".csv"), quote=FALSE, 
+    write.table(Predicted_Data, file=paste0(output.f, "Predicted_fft_SegmSeprate_Full", fft_comp_n, "_", folder, ".csv"), quote=FALSE, 
                 row.names=F, col.names = F, append=F, sep=",")    
-    write.table(Predicted_Data[, c(1, 8)], file=paste0("./Output/Predicted_fft_SegmSeprate_Final", fft_comp_n, "_", folder, ".csv"), quote=FALSE, 
+    write.table(Predicted_Data[, c(1, 8)], file=paste0(output.f, "Predicted_fft_SegmSeprate_Final", fft_comp_n, "_", folder, ".csv"), quote=FALSE, 
                 row.names=F, col.names = F, append=F, sep=",")    
 }
 stopCluster(workers)
 
 system2("C:/cygwin64/bin/cat.exe", 
         args = c("./Output/Prediction_header.txt", 
-                 paste0("./Output/", grep("Predicted_fft_SegmSeprate_Final200_*", dir("./Output"), value=T) ) ),
-        stdout="./Output/Predicted_fft_SegmSeprate_200Together.csv")
+                 paste0(output.f, grep("Predicted_fft_SegmSeprate_Final*", dir(output.f), value=T) ) ),
+        stdout=paste0(output.f, "Together.csv") )
         
