@@ -2,7 +2,7 @@ fft_comp_n <- 200
 N.of.clusters <- 3 # Number of clusters for a parralel execution
 data_location <- "j:/Data_Epil/"
 
-output.f <- paste0("./Output/FFT", fft_comp_n,"_segSep_SVMlinear/")
+output.f <- paste0("./Output/FFT", fft_comp_n,"_segSep_RF/")
 progress_file <- "./Output/training_progress.txt"
 
 ## All variables shoulbe be entered above _______________
@@ -49,14 +49,14 @@ for(folder in dir(data_location)){
                              verboseIter=T)
         
         #trGrid <- expand.grid(C=c(1e-4, 3e-4, 1e-3, 3e-3, 1e-2, 3e-2, 1e-1, 3e-1, 1, 1e1, 1e2, 1e3, 1e4))
-        trGrid <- expand.grid(C=c(1e-4, 1e-3, 1e-2, 1e-1, 1))
+        #trGrid <- expand.grid(C=c(1e-4, 1e-3, 1e-2, 1e-1, 1))
         #rGrid <- expand.grid(C=c(1e-4, 1e-3))
         #trGrid <- expand.grid(mtry=c(2, 80))
         
         base::cat("training", folder, " segment ", seg, "\n", file=progress_file, append=T)
-        Mod <- train(TrainDT, Y, method="svmLinear", 
-        #Mod <- train(TrainDT, Y, method="rf",
-                     tuneGrid=trGrid,
+        #Mod <- train(TrainDT, Y, method="svmLinear", 
+        Mod <- train(TrainDT, Y, method="rf",
+        #             tuneGrid=trGrid,
                      preProcess=c("center", "scale"), metric= "ROC", 
                      verbose = TRUE,
                      trControl = ctrl )
