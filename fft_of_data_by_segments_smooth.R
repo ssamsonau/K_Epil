@@ -1,4 +1,4 @@
-fft_comp_n <- 1000
+fft_comp_n <- 100
 #N.of.clusters <- 2 # Number of clusters for a parralel execution
 data_location <- "j:/Data_Epil/"
 
@@ -13,8 +13,8 @@ library(data.table)
 
 write("", file="./fft_progress.txt", append=FALSE)
 
-#for(folder in dir(data_location)){
-for(folder in c("Patient_2")){
+for(folder in dir(data_location)){
+#for(folder in c("Patient_2")){
 
     #folder <- "Dog_1"
     path <- paste0(data_location, folder)
@@ -34,7 +34,7 @@ for(folder in c("Patient_2")){
     
     #Data table for input data
     MAT <- data.frame( matrix(data = NA, nrow = total_positive+total_negative+total_test,
-                              ncol = (2*fft_comp_n) *N.of.sensors) )
+                              ncol = 3*fft_comp_n *N.of.sensors) )
     
     MAT$Out <- c(rep(1, total_positive), rep(0, total_negative), rep(NA, total_test) )
     MAT$Type <- "NA"
@@ -104,19 +104,38 @@ for(folder in c("Patient_2")){
             #
             
             FFT.DT <- data.table(spec = pg.Mod[max_pos], freq = pg.Freq[max_pos])
-            setkey(FFT.DT, spec)
-            FFT.DT.l <- nrow(FFT.DT)
-            save.FFT <- FFT.DT[FFT.DT.l:(FFT.DT.l - fft_comp_n + 1 )]
+            setkey(FFT.DT, freq)
+            FFT.DT.L <- nrow(FFT.DT)
             
-            MAT[ fullCase_cur_number, ((r-1)*(2*fft_comp_n)+1):((r-1)*2*fft_comp_n + fft_comp_n) ] <- save.FFT$spec
-            MAT[ fullCase_cur_number, ((r-1)*2*fft_comp_n+fft_comp_n+1):(r*2*fft_comp_n) ] <- save.FFT$freq
+            FFT.DT$group <- (1:FFT.DT.L) %/% (FFT.DT.L/fft_comp_n)
+            FFT.DT$group[FFT.DT.L] <- FFT.DT$group[FFT.DT.L-1]
+            
+#             myFunc <- function(s, f){
+#                 #library(caret)
+#                 #l.model <- lm(s ~ f)
+#                 #r.slope <- l.model$coeff[2]
+#                 #r.resid <- summary(l.model)$coeff[1, 2]
+#                 m.spec <- mean(spec)
+#                 variance <- var(spec)
+#                 m.freq <- mean(f)
+#                 return(list(m.spec, variance, m.freq))
+#             }
+            
+            FFT.DT[, c("m.spec", "variance", "m.freq") := list(median(spec), var(spec), median(freq)), by=group]
+            
+                
+            save.FFT <- FFT.DT[, lapply(.SD, unique), 
+                               by=group, .SDcols = c("m.spec", "variance", "m.freq")]
+            
+            MAT[ fullCase_cur_number, ((r-1)*(3*fft_comp_n)+1):((r-1)*3*fft_comp_n + 3*fft_comp_n) ] <- 
+                unlist(save.FFT[, .SD, .SDcols=-"group"])
             
         }
     }
        
     # Save the data
     library(MASS)
-    write.matrix(MAT, file = paste0("./MAT/fft", fft_comp_n, "_MAT_", folder, "_SegmentsSeparate.csv") , sep = ",")
+    write.matrix(MAT, file = paste0("./MAT/FFTsmooth", fft_comp_n, "_MAT_", folder, "_SegmentsSeparate.csv") , sep = ",")
     # next step would be To take learning algorithm and apply to data
     
     write( proc.time() - ptm, "fft_progress.txt", append=TRUE)

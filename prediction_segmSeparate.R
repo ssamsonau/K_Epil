@@ -1,13 +1,19 @@
-fft_comp_n <- 200
+fft_comp_n <- 100 #number of Fourier components to use
 N.of.clusters <- 3 # Number of clusters for a parralel execution
 data_location <- "j:/Data_Epil/"
 
-output.f <- paste0("./Output/FFT", fft_comp_n,"_segSep_RF/")
+model.for.training <- "svmLinear"
+#trGrid <- expand.grid(C=c(1e-4, 3e-4, 1e-3, 3e-3, 1e-2, 3e-2, 1e-1, 3e-1, 1, 1e1, 1e2, 1e3, 1e4))
+trGrid <- expand.grid(C=c(1e-4, 1e-3, 1e-2, 1e-1, 1))
+#trGrid <- expand.grid(C=c(1e-3))
+#trGrid <- expand.grid(mtry=c(2, 80))
+
+output.f <- paste0("./Output/FFTsmooth", fft_comp_n,"_segSep_", model.for.training, "/")
 progress_file <- "./Output/training_progress.txt"
 
 ## All variables shoulbe be entered above _______________
+#setup parallel execution
 library(Revobase);   setMKLthreads(4)
-
 library(foreach); library(doParallel)
 workers <- makeCluster(N.of.clusters);  registerDoParallel(workers)
 
@@ -18,17 +24,20 @@ library(caret); library(pROC)
 base::cat("", file=progress_file, append=F)
 
 for(folder in dir(data_location)){
+    #read current file 
     base::cat("reading", folder, "\n", file=progress_file, append=T)
-    MAT <- fread( paste0("./MAT/fft", fft_comp_n , "_MAT_", folder, "_SegmentsSeparate.csv") , sep = ",") 
+    MAT <- fread( paste0("./MAT/FFTsmooth", fft_comp_n , "_MAT_", folder, "_SegmentsSeparate.csv") , sep = ",") 
+        
     library(stringr)
     MAT <- MAT[, lapply(.SD, str_trim)]
     
-    # data for test
+    # choose data for test
     TestDT <- MAT[Type==c("test"), .SD, .SDcols=-c("Out", "Type", "Segment", "file.name") ]
     TestDT <- TestDT[, lapply(.SD, as.numeric)]
     
     Prediction <- matrix(data=NA, nrow=nrow(TestDT), ncol=7)
     
+    #train model and make prediction for each segment separatelly
     for(seg in 1:6){
             
         TrainDT <- MAT[Type %in% c("preictal", "interictal") & Segment == seg,
@@ -36,7 +45,7 @@ for(folder in dir(data_location)){
         
         TrainDT <- TrainDT[, lapply(.SD, as.numeric)]
         
-            #name of factor should not start with a number
+            #name of a factor should not start with a number
         Y <- MAT[Type %in% c("preictal", "interictal") & Segment == seg , factor( paste0("P", Out) ) ] 
         
         #TrainDT <- TrainDT[1:50]
@@ -48,15 +57,10 @@ for(folder in dir(data_location)){
                              classProbs = TRUE, 
                              verboseIter=T)
         
-        #trGrid <- expand.grid(C=c(1e-4, 3e-4, 1e-3, 3e-3, 1e-2, 3e-2, 1e-1, 3e-1, 1, 1e1, 1e2, 1e3, 1e4))
-        #trGrid <- expand.grid(C=c(1e-4, 1e-3, 1e-2, 1e-1, 1))
-        #rGrid <- expand.grid(C=c(1e-4, 1e-3))
-        #trGrid <- expand.grid(mtry=c(2, 80))
         
         base::cat("training", folder, " segment ", seg, "\n", file=progress_file, append=T)
-        #Mod <- train(TrainDT, Y, method="svmLinear", 
-        Mod <- train(TrainDT, Y, method="rf",
-        #             tuneGrid=trGrid,
+        Mod <- train(TrainDT, Y, method=model.for.training,
+                     tuneGrid=trGrid,
                      preProcess=c("center", "scale"), metric= "ROC", 
                      verbose = TRUE,
                      trControl = ctrl )
@@ -64,12 +68,10 @@ for(folder in dir(data_location)){
         capture.output(Mod, file=progress_file, append=T)
         #Save model if needed
         save(Mod, file=paste0(output.f, "Predicted_fft_Model_", fft_comp_n, "_", folder, "_seg", seg, ".model"))
-        
-        
+            
         #Make prediction
         base::cat("prediction process...\n", file=progress_file, append=T)
         Prediction[, seg] <- as.numeric( predict(Mod, newdata=TestDT ) ) -1
-        
     }    
 
     Prediction[, 7] <- as.numeric( rowSums(Prediction[, 1:6]) > 0 )

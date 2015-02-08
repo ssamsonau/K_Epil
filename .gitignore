@@ -1,0 +1,7 @@
+*.model
+.Rhistory
+*Rproj*
+MAT/*
+fft_progress.txt
+*training_progress.txt
+*.csv

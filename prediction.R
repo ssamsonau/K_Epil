@@ -1,4 +1,4 @@
-fft_comp_n <- 200
+fft_comp_n <- 1000
 N.of.clusters <- 2 # Number of clusters for a parralel execution
 data_location <- "j:/Data_Epil/"
 
@@ -39,8 +39,8 @@ for(folder in dir(data_location)){
                          classProbs = TRUE, 
                          verboseIter=T)
     
-    trGrid <- expand.grid(C=c(1e-4, 3e-4, 1e-3, 3e-3, 1e-2, 3e-2, 1e-1, 3e-1, 1, 1e1, 1e2, 1e3, 1e4))
-    #trGrid <- expand.grid(C=c(1e-4, 1e-3, 1e-2, 1e-1))
+    #trGrid <- expand.grid(C=c(1e-4, 3e-4, 1e-3, 3e-3, 1e-2, 3e-2, 1e-1, 3e-1, 1, 1e1, 1e2, 1e3, 1e4))
+    trGrid <- expand.grid(C=c(1e-4, 1e-3, 1e-2, 1e-1, 1))
     #trGrid <- expand.grid(C=c(1e-3))
     #trGrid <- expand.grid(mtry=c(2, 80))
     
