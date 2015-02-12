@@ -1,4 +1,4 @@
-fft_comp_n <- 1000
+fft_comp_n <- 1000 
 #N.of.clusters <- 2 # Number of clusters for a parralel execution
 data_location <- "j:/Data_Epil/"
 

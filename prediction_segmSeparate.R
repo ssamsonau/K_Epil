@@ -1,4 +1,4 @@
-fft_comp_n <- 100 #number of Fourier components to use
+fft_comp_n <- 100 #number of Fourier components to use 
 N.of.clusters <- 3 # Number of clusters for a parralel execution
 data_location <- "j:/Data_Epil/"
 
